@@ -1,0 +1,173 @@
+drop table artist cascade constraints;
+drop table gallery cascade constraints;
+drop table art cascade constraints;
+
+
+
+create table artist(
+user_id number(10) not null,
+name varchar(20),
+password number(20),
+about varchar(50),
+age number(3),
+artist_pic BLOB
+);
+
+create table gallery(
+gallery_id number(10) not null,
+gallery_name varchar(50)
+);
+
+create table art(
+art_id number(10) not null,
+gallery_id number(10),
+user_id number(10),
+filename varchar(50),
+artist_name varchar(20),
+art_pic BLOB,
+description varchar(50),
+price integer,
+rank number(10) unique,
+upload_date date
+);
+
+
+describe artist;
+describe gallery;
+describe art;
+
+
+alter table artist add primary key(user_id);
+alter table gallery add primary key(gallery_id);
+alter table art add primary key(art_id);
+
+alter table art add foreign key(gallery_id) references gallery(gallery_id) on delete cascade;
+alter table art add foreign key(user_id) references artist(user_id) on delete cascade;
+alter table art add foreign key(artist_name) references artist(name) on delete cascade;
+
+
+
+insert into artist values(1, 'Bikash', 12345,'Developer',20,utl_raw.cast_to_raw('F:\3-1 Works\Database Project- Art Gallery database management system\img1.jpg'));
+insert into artist values(2, 'Tusher', 11115,'Good',40,utl_raw.cast_to_raw('F:\3-1 Works\Database Project- Art Gallery database management system\img2.jpg'));
+insert into artist values(40, 'Dibbya', 49832,'Atel',25,utl_raw.cast_to_raw('F:\3-1 Works\Database Project- Art Gallery database management system\img3.jpg'));
+insert into artist values(45, 'Shorol', 13456,'Gamer',28,utl_raw.cast_to_raw('F:\3-1 Works\Database Project- Art Gallery database management system\img4.jpg'));
+insert into artist values(16, 'Dola', 35681,'Studious',18,utl_raw.cast_to_raw('F:\3-1 Works\Database Project- Art Gallery database management system\img5.jpg'));
+insert into artist values(17, 'Akif', 33721,'Fatty',90,utl_raw.cast_to_raw('F:\3-1 Works\Database Project- Art Gallery database management system\img6.jpg'));
+insert into artist values(57, 'Masud', 78392,'Smallest',5,utl_raw.cast_to_raw('F:\3-1 Works\Database Project- Art Gallery database management system\img7.jpg'));
+
+
+insert into gallery values(1,'Sculpture');
+insert into gallery values(2,'Painting');
+insert into gallery values(3,'Others');
+
+
+
+insert into art values(1,2,40,'Dibbya paint','Dibbya',utl_raw.cast_to_raw('F:\3-1 Works\Database Project- Art Gallery database management system\p1.jpg'),'Painting of a girl and butterfly',12399,2,'14-JUNE-2017');
+insert into art values(2,3,2,'Tusher bat','Tusher',utl_raw.cast_to_raw('F:\3-1 Works\Database Project- Art Gallery database management system\o1.jpg'),'Bat of Sachin',20225,5,'12-MARCH-2017');
+insert into art values(3,1,45,'Shorol sculp','Shorol',utl_raw.cast_to_raw('F:\3-1 Works\Database Project- Art Gallery database management system\s3.jpg'),'Sculpture of Bibekananda',181000,4,'15-FEBRUARY-2017');
+insert into art values(4,1,16,'Dola sculp','Dola',utl_raw.cast_to_raw('F:\3-1 Works\Database Project- Art Gallery database management system\s1.jpg'),'Sculpture of ROBI Tagore',250000,1,'11-MAY-2017');
+insert into art values(5,2,1,'Bikash paint','Bikash',utl_raw.cast_to_raw('F:\3-1 Works\Database Project- Art Gallery database management system\p2.jpg'),'Painting of village view',50000,3,'19-JUNE-2017');
+insert into art values(6,2,17,'Akif paint','Akif',utl_raw.cast_to_raw('F:\3-1 Works\Database Project- Art Gallery database management system\s2.jpg'),'Sculpture of a big Monkey',450000,6,'20-MARCH-2017');
+
+
+
+
+
+--PLSQL part starts here
+
+
+--For login with user_id and password
+set serveroutput on;
+declare
+u_id artist.user_id%type :=1;
+u_name artist.name%type :='Bikash';
+u_pass artist.password%type :=12345;
+passw artist.password%type;
+
+begin
+select password into passw from artist where user_id=u_id and name=u_name;
+if u_pass=passw then
+dbms_output.put_line('Login successful');
+else
+dbms_output.put_line('Access Denied');
+end if;
+end;
+/
+
+
+
+--PLSQL code for discounted price of an art
+set serveroutput on;
+declare
+full_price art.price%type;
+file_title art.filename%type;
+discount_price art.price%type;
+
+begin
+file_title := 'Tusher bat';
+select price into full_price from art where filename like file_title;
+if full_price<30000 then
+    discount_price := full_price;
+elsif full_price >= 30000 and full_price <50000 then
+    discount_price := full_price - (full_price* 0.30);
+elsif full_price >= 50000 and full_price <150000 then
+    discount_price := full_price - (full_price* 0.50);
+else
+    discount_price := full_price - (full_price* 0.60);
+end if;
+
+dbms_output.put_line ( file_title || '  Full price is : ' || full_price || ' and the final Discounted price is : ' || round(discount_price,2));
+
+exception
+     when others then
+         dbms_output.put_line(sqlerrm);
+end;
+/
+
+
+
+--Cursor function starts here
+--Showing arts of one gallery using PLSQL
+set serveroutput on;
+declare
+cursor art_cur is select filename,upload_date from art where gallery_id in(select gallery_id from gallery where gallery_name='Painting');
+art_pointer art_cur%rowtype;
+begin
+open art_cur;
+loop
+fetch art_cur into art_pointer;
+dbms_output.put_line('Painting includes  ' || art_pointer.filename||'  and was uploaded in   '||art_pointer.upload_date);
+exit when art_cur%rowcount>2;
+end loop;
+close art_cur;
+end;
+/
+
+
+
+
+--Showing arts by ranking
+set serveroutput on;
+declare
+cursor art_cur is select art_id,filename,description,upload_date,rank from art order by rank;
+art_pointer art_cur%rowtype;
+begin
+open art_cur;
+loop
+fetch art_cur into art_pointer;
+dbms_output.put_line('Rank: '||art_pointer.rank||'  art no. : '||art_pointer.art_id|| ' Filename: '||art_pointer.filename||'  Description: '||art_pointer.description|| ' Upload date: '||art_pointer.upload_date);
+exit when art_cur%rowcount>5;
+end loop;
+close art_cur;
+end;
+/
+
+
+
+
+commit;
+
+
+
+
+
